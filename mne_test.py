@@ -1,20 +1,29 @@
 import numpy as np
 import mne
+from mne.decoding import CSP
 
-data = np.loadtxt('row2.csv',delimiter=',')
-data = np.transpose(data)
-print(data[1][1])
-ch_names = ['CH1','CH2']
+def f(x):
+    return  4.5/x/(2^23 - 1)
+count2volts = np.vectorize(f)
+data_path = 'C:\Users\innopolis\Desktop\Intership BCI\OpenBCI\OpenBCI_Python-master\data'
+data_Vitaly = np.loadtxt(data_path+'Vitaly_ECG_v2,v3.txt',delimiter=',')
+data_Vitaly = np.transpose(data_Vitaly)
+data_Bulat = np.loadtxt(data_path+'Bulat_ECG_v2,v3.txt',delimiter=',')
+data_Bulat = np.transpose(data_Bulat)
+ch_names = ['V3','V2']
+
+
+epochs_raw = np.asarray(np.array_split(data,10,axis=1))
 
 sfreq = 250
 
-info = mne.create_info(ch_names,sfreq)
-
+info = mne.create_info(ch_names,sfreq,ch_types="eeg")
+print(len(epochs_raw[0][1]))
 raw = mne.io.RawArray(data,info)
-events = mne.find_events(raw, stim_channel='CH1')
-baseline = (None, 0)  # means from the first instant to t = 0
-picks = mne.pick_types(raw.info, meg=False, eeg=True, eog=False, stim=False)
-epochs = mne.Epochs(raw, events, event_id, tmin, tmax, proj=True, picks=picks,
-                    baseline=baseline, preload=False)
+Epochs = mne.EpochsArray(epochs_raw,info)
 
-raw.plot()
+
+from sklearn.lda import LDA  # noqa
+from sklearn.cross_validation import ShuffleSplit  # noqa
+
+input()
