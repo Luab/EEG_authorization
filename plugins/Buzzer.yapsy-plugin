@@ -1,0 +1,9 @@
+
+[Core]
+Name = Buzzer
+Module = Buzzer
+
+[Documentation]
+Author = Lua_b
+Version = 0.1
+Description = Buzzzzz
