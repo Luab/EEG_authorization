@@ -49,8 +49,12 @@ filenames_test = ["processed_Bulat_EEG_FP_2.txt","processed_Vitaly_EEG_FP_2.txt"
 epochs_data_train,labels = parse_data(filenames,["V2","V3"],500,sample_start=5000,sample_end=75000)
 epochs_data_test,labels_test = parse_data(filenames_test,["V2","V3"],500,sample_start=5000,sample_end=75000)
 
-print(len(epochs_data_train[0]))
-print(len(epochs_data_test[0]))
+epochs_data_train = np.concatenate((epochs_data_test,epochs_data_train))
+labels = np.append(labels,labels_test)
+
+    
+print(len(epochs_data_train))
+print(len(labels))
 
 
 '''
@@ -90,10 +94,10 @@ epochs_data_train, labels = shuffle(epochs_data_train,labels)
 epochs_data_test, labels_test = shuffle(epochs_data_test,labels_test)
 
 #print(epochs_data_train[0])
-cv1 = ShuffleSplit(len(labels),test_size=0.1)
-cv2 = ShuffleSplit(len(labels),test_size=0.1)
-cv3= ShuffleSplit(len(labels),test_size=0.1)
-cv4 = ShuffleSplit(len(labels),test_size=0.1)
+cv1 = ShuffleSplit(len(labels),test_size=0.2)
+cv2 = ShuffleSplit(len(labels),test_size=0.2)
+cv3= ShuffleSplit(len(labels),test_size=0.2)
+cv4 = ShuffleSplit(len(labels),test_size=0.2)
 
 scores = []
 
@@ -129,7 +133,7 @@ print("Desicion forest accuracy on test data: %f" % predictor4.score(epochs_data
 
 print(scores4)
 print("Classification accuracy Desicion forest: %f" % np.mean(scores4))
-
+'''
 predictor5 = Pipeline([('CSP', csp5), ('Neural Network', nn)])
 scores5 = cross_val_score(predictor5, epochs_data_train, labels, cv=cv4, n_jobs=1)
 predictor5.fit(epochs_data_train,labels)
@@ -137,6 +141,7 @@ print("NN accuracy on test data: %f" % predictor5.score(epochs_data_test,labels_
 print("NN accuracy on train data: %f" % predictor5.score(epochs_data_train,labels))
 print(scores5)
 print("Classification accuracy Neural Network: %f" % np.mean(scores5))
+'''
 
 predictor6 = Pipeline([('CSP', csp6), ('GradientBoostingClassifier', gradien_boost)])
 scores6 = cross_val_score(predictor6, epochs_data_train, labels, cv=cv4, n_jobs=1)
@@ -145,7 +150,7 @@ print("Gradient Tree Boosting accuracy on test data: %f" % predictor6.score(epoc
 print(scores6)
 print("Classification accuracy Gradient Tree Boosting: %f" % np.mean(scores6))
 
-'''
+
 sfreq = 250
 w_length = int(sfreq * 0.3)   # running classifier: window length
 w_step = int(sfreq * 0.1)  # running classifier: window step size
@@ -155,8 +160,8 @@ labels =  np.asarray(labels)
 for train_idx, test_idx in cv2:
     y_train, y_test = labels[ np.asarray(train_idx)], labels[ np.asarray(test_idx)]
 
-    X_train = csp.fit_transform(epochs_data_train[ np.asarray(train_idx)], y_train)
-    X_test = csp.transform(epochs_data_train[ np.asarray(test_idx)])
+    X_train = csp5.fit_transform(epochs_data_train[ np.asarray(train_idx)], y_train)
+    X_test = csp5.transform(epochs_data_train[ np.asarray(test_idx)])
 
     # fit classifier
     nn.fit(X_train, y_train)
@@ -164,7 +169,7 @@ for train_idx, test_idx in cv2:
     # running classifier: test classifier on sliding window
     score_this_window = []
     for n in w_start:
-        X_test = csp.transform(epochs_data_train[test_idx][:, :, n:(n + w_length)])
+        X_test = csp5.transform(epochs_data_train[test_idx][:, :, n:(n + w_length)])
         score_this_window.append(nn.score(X_test, y_test))
     scores_windows.append(score_this_window)
 
@@ -179,4 +184,3 @@ plt.ylabel('classification accuracy')
 plt.title('Classification score over time')
 plt.legend(loc='lower right')
 plt.show()
-'''
