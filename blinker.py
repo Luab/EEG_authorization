@@ -26,6 +26,7 @@ class CSVLogger():
         self.delim = delim
         self.verbose = verbose
 
+
     def logger(self, sample):
         t = timeit.default_timer() - self.start_time
         # print(timeSinceStart|Sample Id)
