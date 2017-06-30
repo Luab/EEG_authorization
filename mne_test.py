@@ -90,97 +90,63 @@ gradien_boost = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, 
 desfor = RandomForestClassifier(n_estimators=30)
 
 
-epochs_data_train, labels = shuffle(epochs_data_train,labels)
-epochs_data_test, labels_test = shuffle(epochs_data_test,labels_test)
+#epochs_data_train, labels = shuffle(epochs_data_train,labels)
+#epochs_data_test, labels_test = shuffle(epochs_data_test,labels_test)
 
 #print(epochs_data_train[0])
-cv1 = ShuffleSplit(len(labels),test_size=0.2)
-cv2 = ShuffleSplit(len(labels),test_size=0.2)
-cv3= ShuffleSplit(len(labels),test_size=0.2)
-cv4 = ShuffleSplit(len(labels),test_size=0.2)
+cv = ShuffleSplit(len(labels), test_size=0.2)
 
 scores = []
 
-from sklearn.pipeline import Pipeline  # noqa
-from sklearn.cross_validation import cross_val_score  # noqa
+from sklearn.pipeline import Pipeline
+from sklearn.cross_validation import cross_val_score
 
 
-clf = Pipeline([('CSP', csp1), ('LDA', lda)])
-clf.fit(epochs_data_train,labels)
-scores = cross_val_score(clf, epochs_data_train, labels, cv=cv1, n_jobs=1)
-print("LDA accuracy on test data: %f" % clf.score(epochs_data_test,labels_test))
-print(scores)
-print("Classification accuracy LDA: %f" % np.mean(scores))
+def model_evaluate(data,labels,classifier,classifier_name="classifier"):
+    clf = Pipeline([('CSP', csp1), (classifier_name, classifier)])
+    scores = cross_val_score(clf, data, labels, cv=cv, n_jobs=1)
+    #print(scores)
+    print("Classification accuracy "+classifier_name+": %f" % np.mean(scores))
 
-clf2 = Pipeline([('CSP', csp2), ('SVM', svm)])
-scores2 = cross_val_score(clf2, epochs_data_train, labels, cv=cv2, n_jobs=1)
-clf2.fit(epochs_data_train,labels)
-print("SVM accuracy on test data: %f" % clf2.score(epochs_data_test,labels_test))
-print(scores2)
-print("Classification accuracy SVM: %f" % np.mean(scores2))
+model_evaluate(epochs_data_train,labels,lda,"LDA")
+model_evaluate(epochs_data_train,labels,svm,'SVM')
+model_evaluate(epochs_data_train,labels,gnb,"gnb")
+model_evaluate(epochs_data_train,labels,desfor,'desfor')
+model_evaluate(epochs_data_train,labels,nn,"neural network")
+model_evaluate(epochs_data_train,labels,gradien_boost,"GradientBoostingClassifier")
 
-predictor3 = Pipeline([('CSP', csp3), ('GNB', gnb)])
-scores3 = cross_val_score(predictor3, epochs_data_train, labels, cv=cv3, n_jobs=1)
-predictor3.fit(epochs_data_train,labels)
-print("GNB accuracy on test data: %f" % predictor3.score(epochs_data_test,labels_test))
-print(scores3)
-print("Classification accuracy GNB: %f" % np.mean(scores3))
+def draw_training(data,labels,classifier,csp):
+        sfreq = 250
+        w_length = int(sfreq * 0.3)   # running classifier: window length
+        w_step = int(sfreq * 0.1)  # running classifier: window step size
+        w_start = np.arange(0, epochs_data_train.shape[2] - 30, w_step)
+        scores_windows = []
+        labels =  np.asarray(labels)
+        for train_idx, test_idx in cv:
+            y_train, y_test = labels[ np.asarray(train_idx)], labels[ np.asarray(test_idx)]
 
-predictor4 = Pipeline([('CSP', csp4), ('Desicion forest', desfor)])
-scores4 = cross_val_score(predictor4, epochs_data_train, labels, cv=cv4, n_jobs=1)
-predictor4.fit(epochs_data_train,labels)
-print("Desicion forest accuracy on test data: %f" % predictor4.score(epochs_data_test,labels_test))
+            X_train = csp.fit_transform(epochs_data_train[ np.asarray(train_idx)], y_train)
+            X_test = csp.transform(epochs_data_train[ np.asarray(test_idx)])
 
-print(scores4)
-print("Classification accuracy Desicion forest: %f" % np.mean(scores4))
-'''
-predictor5 = Pipeline([('CSP', csp5), ('Neural Network', nn)])
-scores5 = cross_val_score(predictor5, epochs_data_train, labels, cv=cv4, n_jobs=1)
-predictor5.fit(epochs_data_train,labels)
-print("NN accuracy on test data: %f" % predictor5.score(epochs_data_test,labels_test))
-print("NN accuracy on train data: %f" % predictor5.score(epochs_data_train,labels))
-print(scores5)
-print("Classification accuracy Neural Network: %f" % np.mean(scores5))
-'''
+            # fit classifier
+            classifier.fit(X_train, y_train)
 
-predictor6 = Pipeline([('CSP', csp6), ('GradientBoostingClassifier', gradien_boost)])
-scores6 = cross_val_score(predictor6, epochs_data_train, labels, cv=cv4, n_jobs=1)
-predictor6.fit(epochs_data_train,labels)
-print("Gradient Tree Boosting accuracy on test data: %f" % predictor6.score(epochs_data_test,labels_test))
-print(scores6)
-print("Classification accuracy Gradient Tree Boosting: %f" % np.mean(scores6))
+            # running classifier: test classifier on sliding window
+            score_this_window = []
+            for n in w_start:
+                X_test = csp.transform(epochs_data_train[test_idx][:, :, n:(n + w_length)])
+                score_this_window.append(classifier.score(X_test, y_test))
+            scores_windows.append(score_this_window)
 
+        w_times = (w_start + w_length / 2.) / sfreq + 0
 
-sfreq = 250
-w_length = int(sfreq * 0.3)   # running classifier: window length
-w_step = int(sfreq * 0.1)  # running classifier: window step size
-w_start = np.arange(0, epochs_data_train.shape[2] - 30, w_step)
-scores_windows = []
-labels =  np.asarray(labels)
-for train_idx, test_idx in cv2:
-    y_train, y_test = labels[ np.asarray(train_idx)], labels[ np.asarray(test_idx)]
-
-    X_train = csp5.fit_transform(epochs_data_train[ np.asarray(train_idx)], y_train)
-    X_test = csp5.transform(epochs_data_train[ np.asarray(test_idx)])
-
-    # fit classifier
-    nn.fit(X_train, y_train)
-
-    # running classifier: test classifier on sliding window
-    score_this_window = []
-    for n in w_start:
-        X_test = csp5.transform(epochs_data_train[test_idx][:, :, n:(n + w_length)])
-        score_this_window.append(nn.score(X_test, y_test))
-    scores_windows.append(score_this_window)
-
-w_times = (w_start + w_length / 2.) / sfreq + 0
-
-plt.figure()
-plt.plot(w_times, np.mean(scores_windows, 0), label='Score')
-plt.axvline(0, linestyle='--', color='k', label='Onset')
-plt.axhline(0.5, linestyle='-', color='k', label='Chance')
-plt.xlabel('time (s)')
-plt.ylabel('classification accuracy')
-plt.title('Classification score over time')
-plt.legend(loc='lower right')
-plt.show()
+        plt.figure()
+        plt.plot(w_times, np.mean(scores_windows, 0), label='Score')
+        plt.axvline(0, linestyle='--', color='k', label='Onset')
+        plt.axhline(0.5, linestyle='-', color='k', label='Chance')
+        plt.xlabel('time (s)')
+        plt.ylabel('classification accuracy')
+        plt.title('Classification score over time')
+        plt.legend(loc='lower right')
+        plt.show()
+draw_training(epochs_data_train,labels,nn,csp1)
