@@ -27,19 +27,18 @@ def compact_labels(labels):
         labels[n] = sum(i)/len(i)
     return labels
 
+def parse_file_without_events(filename, channel_number, user_id=0):
+    data_path = r'C:\Users\innopolis\Desktop\Intership BCI\OpenBCI\OpenBCI_Python-master\data\\'
+    data = np.loadtxt(data_path + filename, delimiter=',')
+    return data
+
 def parse_files_without_events(filenames,channel_number,split_function,channel_names=None):
     if not channel_names:
         channel_names = [str(x) for x in range(channel_number)]
     if channel_number != len(channel_names):
         raise "Channel number should be equal to number of channel names"
 
-    def parse_file_without_events(filename, channel_number, user_id=0):
-        data = np.loadtxt(data_path + file, delimiter=',')
-        return data
-
-    data_path = r'C:\Users\innopolis\Desktop\Intership BCI\OpenBCI\OpenBCI_Python-master\data\\'
     data = []
-    info = []
     for id,file in enumerate(filenames):
         x = parse_file_without_events(file,channel_number,id)
         info = mne.create_info(['CH1', 'CH2'], 250, 'eeg')
