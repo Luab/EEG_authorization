@@ -49,11 +49,13 @@ def butter_bandstop_filter(data):
 
 
 
-user_matrix,labels = eegparser.parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
-np.save(r"data\Alcoholics\alcoholics_user_matrix.npy",user_matrix)
+#user_matrix,labels = eegparser.parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
+
+#np.save(r"data\Alcoholics\alcoholics_user_matrix.npy",user_matrix)
 #user_mauser_matrix = np.delete(user_matrix,108)
 #user_matrix = np.delete(user_matrix,116)
-user_matrix = np.load(r"data\Alcoholics\alcoholics_user_matrix.npy")
+#user_matrix = np.load(r"data\Alcoholics\alcoholics_user_matrix.npy")
+
 
 #filenames = "processed_Vitaly0_EEG_FP_3.txt",["processed_Bulat1_EEG_FP_2.txt","processed_Subject2_Alpha_1_2_channels_1.txt","processed_Subject3_Alpha_1_2_channels_1.txt","processed_Subject4_Alpha_1_2_channels.txt"]
 #filename_other = [["processed_Vitaly0_EEG_FP_2.txt"],["processed_Bulat1_EEG_FP_1.txt"],["processed_Subject2_Alpha_1_2_channels_1.txt"],["processed_Subject3_Alpha_1_2_channels_1.txt"],["processed_Subject6_Alpha_1_2_channels_1.txt"]]
@@ -64,10 +66,9 @@ user_matrix = np.load(r"data\Alcoholics\alcoholics_user_matrix.npy")
 #test = ["processed_Bulat1_EEG_FP_1.txt"]
 
 
-#user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 1000, sample_start=5500, sample_end=65500)
-#print(np.asarray(user_matrix[0]).shape)
+user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 1000, sample_start=5500, sample_end=65500)
 
-def fit_classifier_with_csp(data, labels, classifier):
+def fit_classifier_cross_val_score(data, labels, classifier):
     cv = ShuffleSplit(len(labels), test_size=0.1)
     scores = cross_val_score(classifier, data, labels, cv=cv, n_jobs=1)
     return np.mean(scores)
@@ -89,11 +90,33 @@ def create_confidence_matrix(user_matix,file_number=0):
                 if len(data) == len(labels):
                         csp = CSP(n_components=4)
                         clf = Pipeline([('CSP', csp), ("LDA", lda)])
-                        score_matrix[id][oid] = fit_classifier_with_csp(data, labels, clf)
+                        score_matrix[id][oid] = fit_classifier_cross_val_score(data, labels, clf)
                         classifier_matrix[id][oid] = clf
                 else:
                     print("Smth gone wrong")
     return score_matrix,classifier_matrix
+
+def create_confidence_matrix_one_vs_one(user_matix,file_number=0):
+    score_matrix = np.full((len(user_matix),len(user_matix)),0)
+    lda = LDA()
+    csp = CSP(n_components=2)
+    clf = Pipeline([('CSP', csp), ("LDA", lda)])
+    from sklearn.multiclass import OneVsRestClassifier
+    from sklearn.multiclass import OneVsOneClassifier
+    classifier = OneVsOneClassifier(clf)
+    labels = []
+    data = []
+    for id,subject in enumerate(user_matix):
+        labels1 = [id for i in range(len(subject))]
+        if not len(labels):
+            labels = labels1
+            data = subject
+        else:
+            labels = np.concatenate((labels,np.asarray(labels1)))
+            data = np.concatenate((data,np.asarray(subject)))
+    score_matrix = fit_classifier_cross_val_score(data, labels, classifier)
+
+    return score_matrix,classifier
 
 def test_classifier_matrix(classifier_matrix,user_matix,file_number=0):
     from sklearn.cross_validation import permutation_test_score
@@ -118,9 +141,11 @@ def test_classifier_matrix(classifier_matrix,user_matix,file_number=0):
                         pass
     return score_matrix
 
-score_matrix,classifier_matrix = create_confidence_matrix(user_matrix)
-np.save(r"data\Alcoholics\alcoholics_score_matrix",np.asarray(score_matrix))
-new_score = test_classifier_matrix(classifier_matrix,user_matrix)
+print(user_matrix)
+score_matrix,classifier_matrix = create_confidence_matrix_one_vs_one(user_matrix)
+print(score_matrix)
+#np.save(r"data\Alcoholics\alcoholics_score_matrix",np.asarray(score_matrix))
+#new_score = test_classifier_matrix(classifier_matrix,user_matrix)
 
 
 

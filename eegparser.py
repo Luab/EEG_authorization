@@ -23,7 +23,7 @@ def parse_from_alcoholic_dataset(directory):
     this_subj = onlyfiles[0].split(".")[0]
     for f in onlyfiles:
         subj = f.split(".")[0]
-        subject_data = [[],[],[]]
+        subject_data = [[],[]]
         with open(directory+r"\\"+f) as opened:
             EC = False
             for line in opened:
