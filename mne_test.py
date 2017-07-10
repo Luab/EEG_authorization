@@ -49,8 +49,8 @@ def butter_bandstop_filter(data):
 
 
 
-#user_matrix,labels = eegparser.parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
-#np.save(r"data\Alcoholics\alcoholics_user_matrix_more_channels.npy",user_matrix)
+user_matrix,labels = eegparser.parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
+np.save(r"data\Alcoholics\alcoholics_user_matrix.npy",user_matrix)
 #user_mauser_matrix = np.delete(user_matrix,108)
 #user_matrix = np.delete(user_matrix,116)
 user_matrix = np.load(r"data\Alcoholics\alcoholics_user_matrix.npy")
@@ -119,7 +119,7 @@ def test_classifier_matrix(classifier_matrix,user_matix,file_number=0):
     return score_matrix
 
 score_matrix,classifier_matrix = create_confidence_matrix(user_matrix)
-np.save(r"data\Alcoholics\alcoholics_score_matrix3",np.asarray(score_matrix))
+np.save(r"data\Alcoholics\alcoholics_score_matrix",np.asarray(score_matrix))
 new_score = test_classifier_matrix(classifier_matrix,user_matrix)
 
 
