@@ -1,8 +1,11 @@
-from eegparser import parse_files_without_events
+import numpy as np
+from mne.decoding import CSP
 
-filenames = ["processed_Bulat_ECG_v2,v3.txt","processed_Vitaly_ECG_v2,v3.txt"]
-def f():
-    return 42
-data = parse_files_without_events(filenames, 2,f)
-for raw in data:
-    print(raw.info['subject_info'])
+import mne
+matrix = np.load(r"data\Alcoholics\alcoholics_score_matrix.npy")
+matrix2 = np.load(r"data\Alcoholics\alcoholics_score_matrix2.npy")
+for id,row in enumerate(matrix):
+    print(id)
+    print(np.mean(np.concatenate((row[:id],row[id+1:120])))-np.mean(np.concatenate((matrix2[id][:id],matrix2[id][id+1:120]))))
+    #print(min(np.concatenate((row[:id],row[id+1:120])),np.concatenate((matrix2[id][:id],matrix2[id][id+1:120]))))
+

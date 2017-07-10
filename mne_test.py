@@ -45,150 +45,82 @@ def butter_bandstop_filter(data):
     return y
 
 
-def parse_data(filenames,channel_names,split,sample_start=0,sample_end=20000):
-    def f(x):
-        return 4.5 / x / (2 ^ 23 - 1)
-    count2volts = np.vectorize(f)
-    def multiple(x):
-        return x * pow(10, 3)
-    mvolts2volts = np.vectorize(multiple)
-
-    data_path = r'C:\Users\innopolis\Desktop\Intership BCI\OpenBCI\OpenBCI_Python-master\data\\'
-    epochs_data_train = []
-    labels = []
-    for id,file in enumerate(filenames):
-        data = np.loadtxt(data_path + file, delimiter=',')
-        data =  np.transpose(data[sample_start:sample_end])
-        plt.plot(data[0])
-        plt.plot(butter_bandpass_filter(data[0]))
-        plt.plot(iirnotch_filter(data[0]))
-        plt.show()
-        for j in range(len(data)):
-            data[j] = butter_bandpass_filter(data[j]) #apply filtering
-            #data[j] = butter_bandstop_filter(data[j])
-
-        epochs_raw = np.asarray(np.array_split(data,split,axis=1))
-        if np.asarray(epochs_data_train).size == 0:
-            epochs_data_train = epochs_raw
-        else:
-            epochs_data_train = np.concatenate((np.asarray(epochs_data_train),epochs_raw))
-        for x in range(split):
-            labels.append(id)
-
-    return epochs_data_train,labels
-
-def filter_nan_and_infinite(array):
-    array = list(filter(lambda x: x != float('-inf'), array))
-    array[array == inf] = 0.0
-    array[array == NaN] = 0.0
-    return array
-
-def parse_from_alcoholic_dataset(directory):
-    #TODO USERS 108 and 116 are bad. Drop them
-    from os import listdir
-    from os.path import isfile, join
-    onlyfiles = [f for f in listdir(directory) if isfile(join(directory, f))]
-    result_data = [[] for i in range(122)]
-    labels = []
-    i = 0
-    print(len(onlyfiles))
-    print(onlyfiles[0].split(".")[0])
-    subj = onlyfiles[0].split(".")[0]
-    this_subj = onlyfiles[0].split(".")[0]
-    for f in onlyfiles:
-        subj = f.split(".")[0]
-        subject_data = [[],[]]
-        with open(directory+r"\\"+f) as opened:
-            EC = False
-            for line in opened:
-                line = line.split(' ')
-                if line[0] != "#":
-                    if line[1] == "FP1":
-                        if float(line[3]) == -inf or float(line[3]) == inf or float(line[3]) == NaN:
-                            pass
-                        else:
-                            subject_data[0].append(float(line[3]))
-                    if line[1] == "FP2":
-                        if float(line[3]) == -inf or float(line[3]) == inf or float(line[3]) == NaN:
-                            pass
-                        else:
-                            subject_data[1].append(float(line[3]))
-            for id,channel in enumerate(subject_data):
-                if len(channel) == 0:
-                    EC = True
-                else:
-                    subject_data[id] = filter_nan_and_infinite(channel)
-            if not EC:
-                result_data[i].append(subject_data)
-
-            if subj == this_subj:
-                if not EC:
-                    labels.append(i)
-            else:
-                this_subj = f.split(".")[0]
-                i = i+1
-                if not EC:
-                    labels.append(i)
-    return result_data,labels
 
 
-user_matrix,labels = parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
-np.save("alcoholics_user_matrix.npy",user_matrix)
-#user_matrix = np.load("alcoholics_user_matrix.npy")
-user_matrix = np.delete(user_matrix,108)
-user_matrix = np.delete(user_matrix,116)
 
 
-#filenames = "processed_Vitaly_EEG_FP_2.txt",["processed_Bulat_EEG_FP_2.txt","processed_Subject2_Alpha_1_2_channels.txt","processed_Subject3_Alpha_1_2_channels.txt","processed_Subject4_Alpha_1_2_channels.txt"]
-#filename_other = [["processed_Vitaly_EEG_FP.txt"],["processed_Bulat_EEG_FP.txt"],["processed_Subject2_Alpha_1_2_channels.txt"],["processed_Subject3_Alpha_1_2_channels.txt"],["processed_Subject1_Alpha_1_2_channels.txt"]]
-#data,events,labels = parse_data(filenames)
+#user_matrix,labels = eegparser.parse_from_alcoholic_dataset(r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alcoholics\result')
+#np.save(r"data\Alcoholics\alcoholics_user_matrix_more_channels.npy",user_matrix)
+#user_mauser_matrix = np.delete(user_matrix,108)
+#user_matrix = np.delete(user_matrix,116)
+user_matrix = np.load(r"data\Alcoholics\alcoholics_user_matrix.npy")
+
+#filenames = "processed_Vitaly0_EEG_FP_3.txt",["processed_Bulat1_EEG_FP_2.txt","processed_Subject2_Alpha_1_2_channels_1.txt","processed_Subject3_Alpha_1_2_channels_1.txt","processed_Subject4_Alpha_1_2_channels.txt"]
+#filename_other = [["processed_Vitaly0_EEG_FP_2.txt"],["processed_Bulat1_EEG_FP_1.txt"],["processed_Subject2_Alpha_1_2_channels_1.txt"],["processed_Subject3_Alpha_1_2_channels_1.txt"],["processed_Subject6_Alpha_1_2_channels_1.txt"]]
+#data,events,labels = parse_openbci_data(filenames)
 #epochs_data_train, labels = eegparser.split_data_evenly(data, 100, labels, 25000)
 
-#epochs_data_train,labels = parse_data(filenames,["V2","V3"],1000,sample_start=5000,sample_end=75000)
-#test = ["processed_Bulat_EEG_FP.txt"]
-
-'''
-user_matrix = []
-for user in filename_other:
-    user_data, useless = parse_data(user,["V2","V3"],1000,sample_start=5500,sample_end=65500)
-    user_matrix.append(user_data)
-'''
-
-def fit_classifier_with_csp(data, labels, classifier, classifier_name="classifier"):
-    cv = ShuffleSplit(len(labels), test_size=0.8)
-    csp = CSP(n_components=4, reg='ledoit_wolf', log=True, cov_est="epoch")
-    clf = Pipeline([('CSP', csp), (classifier_name, classifier)])
-    scores = cross_val_score(clf, data, labels, cv=cv, n_jobs=1)
-    #print(scores)
-    #print("Classification accuracy "+classifier_name+": %f" % np.mean(scores))
-    return np.mean(scores),clf
+#epochs_data_train,labels = parse_openbci_data(filenames,["V2","V3"],1000,sample_start=5000,sample_end=75000)
+#test = ["processed_Bulat1_EEG_FP_1.txt"]
 
 
+#user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 1000, sample_start=5500, sample_end=65500)
+#print(np.asarray(user_matrix[0]).shape)
 
-def create_confidence_matrix(user_matix):
-    score_matrix = np.full((122,122),0)
-    for id,user in enumerate(user_matrix):
-        for oid,other_user in enumerate(user_matrix):
+def fit_classifier_with_csp(data, labels, classifier):
+    cv = ShuffleSplit(len(labels), test_size=0.1)
+    scores = cross_val_score(classifier, data, labels, cv=cv, n_jobs=1)
+    return np.mean(scores)
+
+def create_confidence_matrix(user_matix,file_number=0):
+    score_matrix = np.full((len(user_matix),len(user_matix)),0)
+    classifier_matrix = [[0 for x in range(len(user_matix))] for y in range(len(user_matix))]
+    for id,subject in enumerate(user_matix):
+        print("Checking user "+str(id))
+        for oid,other_subject in enumerate(user_matix):
             if id == oid:
                 pass
             else:
-                print(len(user))
-                print(len(other_user))
                 lda = LDA()
-                labels1 = [0 for i in range(len(user))]
-                labels2 = [1 for j in range(len(other_user))]
+                labels1 = [0 for i in range(len(subject))]
+                labels2 = [1 for j in range(len(other_subject))]
                 labels = np.concatenate((np.asarray(labels1),np.asarray(labels2)))
-                data = np.concatenate((np.asarray(user),np.asarray(other_user)))
+                data = np.concatenate((np.asarray(subject),np.asarray(other_subject)))
                 if len(data) == len(labels):
-                    score_matrix[id][oid],classifier = fit_classifier_with_csp(data, labels, lda)
+                        csp = CSP(n_components=4)
+                        clf = Pipeline([('CSP', csp), ("LDA", lda)])
+                        score_matrix[id][oid] = fit_classifier_with_csp(data, labels, clf)
+                        classifier_matrix[id][oid] = clf
                 else:
                     print("Smth gone wrong")
+    return score_matrix,classifier_matrix
+
+def test_classifier_matrix(classifier_matrix,user_matix,file_number=0):
+    from sklearn.cross_validation import permutation_test_score
+    score_matrix = np.full((len(user_matix),len(user_matix)),0)
+    for id,subject in enumerate(user_matix):
+        print("Checking user "+str(id))
+        for oid,other_subject in enumerate(user_matix):
+            if id == oid:
+                pass
+            else:
+                    try:
+                        lda = LDA()
+                        labels1 = [0 for i in range(len(subject[file_number]))]
+                        labels2 = [1 for j in range(len(other_subject[file_number]))]
+                        labels = np.concatenate((np.asarray(labels1),np.asarray(labels2)))
+                        data = np.concatenate((np.asarray(subject[file_number]),np.asarray(other_subject[file_number])))
+                        if len(data) == len(labels):
+                            cv = ShuffleSplit(len(labels), test_size=0.1)
+                            score_matrix[id][oid],permutation_scores,pvalue = permutation_test_score(classifier_matrix[id][oid],data,labels,cv)
+                            print(pvalue)
+                    except IndexError:
+                        pass
     return score_matrix
 
-score_matrix, confusion_score = create_confidence_matrix(user_matrix)
-np.save("alcoholics_score_matrix",np.asarray(score_matrix))
-for row in score_matrix:
-    print(np.mean(row))
+score_matrix,classifier_matrix = create_confidence_matrix(user_matrix)
+np.save(r"data\Alcoholics\alcoholics_score_matrix3",np.asarray(score_matrix))
+new_score = test_classifier_matrix(classifier_matrix,user_matrix)
 
 
 
