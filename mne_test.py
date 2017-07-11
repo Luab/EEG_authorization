@@ -30,12 +30,7 @@ def iirnotch_filter(data):
     y = signal.lfilter(b2, a2, data)
     return y
 
-def butter_bandpass_filter(data):
-    fs_Hz = 250.0
-    bp2_stop_Hz = np.array([49, 51.0])
-    b2, a2 = signal.butter(2, bp2_stop_Hz / (fs_Hz / 2.0), 'bandpass')
-    y = signal.lfilter(b2, a2, data)
-    return y
+
 
 def butter_bandstop_filter(data):
     fs_Hz = 250.0
@@ -69,8 +64,9 @@ def butter_bandstop_filter(data):
 user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 1000, sample_start=5500, sample_end=65500)
 
 def fit_classifier_cross_val_score(data, labels, classifier):
-    cv = ShuffleSplit(len(labels), test_size=0.1)
+    cv = ShuffleSplit(len(labels), test_size=0.2)
     scores = cross_val_score(classifier, data, labels, cv=cv, n_jobs=1)
+    classifier.fit(data,labels)
     return np.mean(scores)
 
 def create_confidence_matrix(user_matix,file_number=0):
@@ -83,10 +79,10 @@ def create_confidence_matrix(user_matix,file_number=0):
                 pass
             else:
                 lda = LDA()
-                labels1 = [0 for i in range(len(subject))]
-                labels2 = [1 for j in range(len(other_subject))]
+                labels1 = [0 for i in range(len(subject[file_number]))]
+                labels2 = [1 for j in range(len(other_subject[file_number]))]
                 labels = np.concatenate((np.asarray(labels1),np.asarray(labels2)))
-                data = np.concatenate((np.asarray(subject),np.asarray(other_subject)))
+                data = np.concatenate((np.asarray(subject[file_number]),np.asarray(other_subject[file_number])))
                 if len(data) == len(labels):
                         csp = CSP(n_components=4)
                         clf = Pipeline([('CSP', csp), ("LDA", lda)])
@@ -96,54 +92,75 @@ def create_confidence_matrix(user_matix,file_number=0):
                     print("Smth gone wrong")
     return score_matrix,classifier_matrix
 
-def create_confidence_matrix_one_vs_one(user_matix,file_number=0):
+def create_confidence_matrix_one_vs_one(user_matix,file_start=0,file_stop=0):
     score_matrix = np.full((len(user_matix),len(user_matix)),0)
     lda = LDA()
     csp = CSP(n_components=2)
-    clf = Pipeline([('CSP', csp), ("LDA", lda)])
     from sklearn.multiclass import OneVsRestClassifier
     from sklearn.multiclass import OneVsOneClassifier
-    classifier = OneVsOneClassifier(clf)
+    classifier = OneVsOneClassifier(lda)
+    clf = Pipeline([('CSP', csp), ("OneVsOneClassifier", classifier)])
     labels = []
     data = []
     for id,subject in enumerate(user_matix):
-        labels1 = [id for i in range(len(subject))]
+        labels1 = [id for i in range(len(subject[file_start:file_stop]))]
         if not len(labels):
             labels = labels1
-            data = subject
+            data = subject[file_start:file_stop]
         else:
             labels = np.concatenate((labels,np.asarray(labels1)))
-            data = np.concatenate((data,np.asarray(subject)))
-    score_matrix = fit_classifier_cross_val_score(data, labels, classifier)
+            data = np.concatenate((data,np.asarray(subject[file_start:file_stop])))
+    print(len(data))
+    print(len(labels))
+    #preprocessed_data = csp.fit_transform(data,labels)
+    score_matrix = fit_classifier_cross_val_score(data, labels, clf)
+    clf.fit(data,labels)
+    return score_matrix,clf
 
-    return score_matrix,classifier
-
-def test_classifier_matrix(classifier_matrix,user_matix,file_number=0):
+def test_classifier_matrix(classifier_matrix,user_matix,file_number_first=0,file_number_other=0):
     from sklearn.cross_validation import permutation_test_score
     score_matrix = np.full((len(user_matix),len(user_matix)),0)
     for id,subject in enumerate(user_matix):
         print("Checking user "+str(id))
         for oid,other_subject in enumerate(user_matix):
             if id == oid:
-                pass
+                     pass
             else:
                     try:
                         lda = LDA()
-                        labels1 = [0 for i in range(len(subject[file_number]))]
-                        labels2 = [1 for j in range(len(other_subject[file_number]))]
+                        labels1 = [0 for i in range(len(subject[file_number_first]))]
+                        labels2 = [1 for j in range(len(other_subject[file_number_other]))]
                         labels = np.concatenate((np.asarray(labels1),np.asarray(labels2)))
-                        data = np.concatenate((np.asarray(subject[file_number]),np.asarray(other_subject[file_number])))
+                        data = np.concatenate((np.asarray(subject[file_number_first]),np.asarray(other_subject[file_number_other])))
                         if len(data) == len(labels):
-                            cv = ShuffleSplit(len(labels), test_size=0.1)
-                            score_matrix[id][oid],permutation_scores,pvalue = permutation_test_score(classifier_matrix[id][oid],data,labels,cv)
-                            print(pvalue)
+                            score_matrix[id][oid] = classifier_matrix[id][oid].score(data,labels)
                     except IndexError:
                         pass
     return score_matrix
 
-print(user_matrix)
-score_matrix,classifier_matrix = create_confidence_matrix_one_vs_one(user_matrix)
-print(score_matrix)
+def authorize(classifier_matrix,auth_data,user_auth,file_number_first=0,file_number_other=0):
+    from sklearn.cross_validation import permutation_test_score
+    predict_matrix = np.full((len(classifier_matrix),len(classifier_matrix)),0)
+    for id,clf in enumerate(classifier_matrix):
+        for oid,cl in enumerate(clf):
+            if id == oid:
+                pass
+            else:
+                predict_matrix[id][oid] = np.mean(cl.predict(auth_data))
+    return predict_matrix
+
+
+
+score,classifier = create_confidence_matrix(user_matrix)
+print(score)
+spl = np.array_split(np.asarray(user_matrix[1][1]),2)
+x = authorize(classifier,user_matrix[1][1],1)
+user_matrix[1][0] = np.concatenate((user_matrix[1][0],user_matrix[1][3]))
+score,classifier = create_confidence_matrix(user_matrix)
+y = authorize(classifier,user_matrix[1][1],1)
+print(x)
+print(y)
+
 #np.save(r"data\Alcoholics\alcoholics_score_matrix",np.asarray(score_matrix))
 #new_score = test_classifier_matrix(classifier_matrix,user_matrix)
 

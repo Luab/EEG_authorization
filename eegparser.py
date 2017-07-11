@@ -93,6 +93,7 @@ def parse_openbci_data(channel_names,split,sample_start=0,sample_end=20000,
         data = np.loadtxt(data_path + file, delimiter=',')
         data =  np.transpose(data[sample_start:sample_end])
         for j in range(len(data)):
+            pass
             data[j] = butter_bandpass_filter(data[j]) #apply filtering
             #data[j] = butter_bandstop_filter(data[j])
         epochs_raw = np.asarray(np.array_split(data,split,axis=1))
@@ -104,10 +105,17 @@ def parse_openbci_data(channel_names,split,sample_start=0,sample_end=20000,
 
 
 
-def butter_bandpass_filter(data):
+def butter_bandstop_filter(data):
     fs_Hz = 250.0
     bp2_stop_Hz = np.array([49, 51.0])
-    b2, a2 = signal.butter(2, bp2_stop_Hz / (fs_Hz / 2.0), 'bandstop')
+    b2, a2 = signal.butter(4, bp2_stop_Hz / (fs_Hz / 2.0), 'bandstop')
+    y = signal.lfilter(b2, a2, data)
+    return y
+
+def butter_bandpass_filter(data):
+    fs_Hz = 250.0
+    bp2_stop_Hz = np.array([5, 30])
+    b2, a2 = signal.butter(6, bp2_stop_Hz / (fs_Hz / 2.0), 'bandpass')
     y = signal.lfilter(b2, a2, data)
     return y
 
