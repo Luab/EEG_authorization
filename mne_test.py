@@ -61,7 +61,7 @@ def butter_bandstop_filter(data):
 #test = ["processed_Bulat1_EEG_FP_1.txt"]
 
 
-user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 1000, sample_start=5500, sample_end=65500)
+user_matrix, useless = eegparser.parse_openbci_data(["V2", "V3"], 280, sample_start=0, sample_end=70000)
 
 def fit_classifier_cross_val_score(data, labels, classifier):
     cv = ShuffleSplit(len(labels), test_size=0.2)
@@ -146,21 +146,26 @@ def authorize(classifier_matrix,auth_data,user_auth,file_number_first=0,file_num
             if id == oid:
                 pass
             else:
-                predict_matrix[id][oid] = np.mean(cl.predict(auth_data))
-    return predict_matrix
+                predict_matrix[id][oid],prediction = np.mean(cl.predict(auth_data)),cl.predict(auth_data)
+    return predict_matrix,prediction
 
 
 
 score,classifier = create_confidence_matrix(user_matrix)
 print(score)
-spl = np.array_split(np.asarray(user_matrix[1][1]),2)
-x = authorize(classifier,user_matrix[1][1],1)
-user_matrix[1][0] = np.concatenate((user_matrix[1][0],user_matrix[1][3]))
+spl = np.array_split(np.asarray(user_matrix[0][1]),2)
+x,p1 = authorize(classifier,user_matrix[0][3][:140],1)
+user_matrix[0][0] = np.concatenate((user_matrix[0][0],user_matrix[0][1]))
 score,classifier = create_confidence_matrix(user_matrix)
-y = authorize(classifier,user_matrix[1][1],1)
+y,p2 = authorize(classifier,user_matrix[0][3][:140],1)
 print(x)
+print("Values before incrementing")
+for id,row in enumerate(x):
+    print("Auth as user "+str(id)+" "+str(np.mean(row)))
+print("Values after incrementing")
 print(y)
-
+for id,row in enumerate(y):
+    print("Auth as user "+str(id)+" "+str(np.mean(row)))
 #np.save(r"data\Alcoholics\alcoholics_score_matrix",np.asarray(score_matrix))
 #new_score = test_classifier_matrix(classifier_matrix,user_matrix)
 
