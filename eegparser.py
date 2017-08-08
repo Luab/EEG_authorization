@@ -64,8 +64,8 @@ def parse_from_alcoholic_dataset(directory):
     return result_data,labels
 
 
-def parse_openbci_data(channel_names,split,sample_start=0,sample_end=20000,
-                       data_path=r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alpha Waves\\',filenames=None):
+def parse_openbci_data(channel_names,split,sample_start=0,sample_end=None,
+                       data_path=r'C:\Users\innopolis\Desktop\IntershipBCI\OpenBCI\OpenBCI_Python-master\data\Alpha Waves',filenames=None):
     '''
     :param channel_names: - array of channels (currently unused, huh)
     :param split: - number of subarrays (epochs) to split each file to
@@ -86,17 +86,35 @@ def parse_openbci_data(channel_names,split,sample_start=0,sample_end=20000,
     def multiple(x):
         return x * pow(10, 3)
     mvolts2volts = np.vectorize(multiple)
-    user_matrix = [[] for x in range(7)] #TODO Fix me pls. :c
+    user_matrix = [[] for x in range(27)] #TODO Fix me pls. :c
     labels = []
     for id,file in enumerate(filenames):
-        subjectid = int(file.split("_")[1][-1])
-        data = np.loadtxt(data_path + file, delimiter=',')
-        data =  np.transpose(data[sample_start:sample_end])
+        try:
+            subjectid = int(file.split("_")[1].replace("Subject",""))
+        except ValueError:
+            try:
+                try:
+                    subjectid = int(file.split("_")[1].replace("Bulat",""))
+                except ValueError:
+                    subjectid = int(file.split("_")[1].replace("Vitaly",""))
+            except ValueError:
+                subjectid = int(file.split("_")[1].replace("subject", ""))
+
+        data = np.loadtxt(data_path+"\\" + file, delimiter=',')
+        data = data[:len(data)-len(data)%250]
+        if not sample_end:
+            data = np.transpose(data)
+        else:
+            data =  np.transpose(data[sample_start:sample_end])
         for j in range(len(data)):
             pass
             data[j] = butter_bandpass_filter(data[j]) #apply filtering
             #data[j] = butter_bandstop_filter(data[j])
-        epochs_raw = np.asarray(np.array_split(data,split,axis=1))
+        epochs_raw = []
+        if not sample_end:
+            epochs_raw = np.array_split(np.asarray(data), len(data[0])-len(data[0])%250, axis=1)
+        else:
+            epochs_raw = np.array_split(np.asarray(data),split,axis=1)
         user_matrix[subjectid].append(epochs_raw)
         for x in range(split):
             labels.append(subjectid)
@@ -114,7 +132,7 @@ def butter_bandstop_filter(data):
 
 def butter_bandpass_filter(data):
     fs_Hz = 250.0
-    bp2_stop_Hz = np.array([5, 30])
+    bp2_stop_Hz = np.array([1, 50])
     b2, a2 = signal.butter(6, bp2_stop_Hz / (fs_Hz / 2.0), 'bandpass')
     y = signal.lfilter(b2, a2, data)
     return y
