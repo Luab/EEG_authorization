@@ -1,0 +1,14 @@
+numpy
+mne
+sklearn
+scipy
+matplotlib
+psychopy
+multiprocessing 
+glob
+pdb
+struct
+serial
+btle 
+yapsy
+atexit
